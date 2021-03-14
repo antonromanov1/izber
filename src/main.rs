@@ -27,8 +27,8 @@ struct InstBase {
     users: Vec<u32>,
 }
 
-impl InstBase {
-    pub fn new() -> InstBase {
+impl Default for InstBase {
+    fn default() -> Self {
         InstBase {
             id: 0,
             type_: Type::NoType,
@@ -60,12 +60,12 @@ struct BinaryOp {
     input2: u32,
 }
 
-impl BinaryOp {
-    pub fn new() -> BinaryOp {
+impl Default for BinaryOp {
+    fn default() -> Self {
         BinaryOp {
-            inst_base: InstBase::new(),
-            input1: 0,
-            input2: 0,
+            inst_base: Default::default(),
+            input1: u32::MAX,
+            input2: u32::MAX,
         }
     }
 }
@@ -234,9 +234,9 @@ macro_rules! basic_block {
     };
 }
 
-macro_rules! inst_add {
-    ( $ir_constructor:ident, $id:expr ) => {{
-        let mut inst = Inst::Add(BinaryOp::new());
+macro_rules! inst {
+    ( $ir_constructor:ident, $opcode:ident, $id:expr ) => {{
+        let mut inst = Inst::$opcode(Default::default());
         inst.set_id($id);
         $ir_constructor
             .current_bb
@@ -253,8 +253,8 @@ fn main() {
 
     basic_block!(z, 2);
     {
-        inst_add!(z, 1).s32();
-        inst_add!(z, 2).s32();
+        inst!(z, Add, 1).s32();
+        inst!(z, Add, 2).s32();
     }
 
     (*z.current_bb.as_ref().unwrap()).dump();
