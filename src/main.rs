@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 enum Type {
     NoType,
@@ -29,7 +30,7 @@ struct InstBase {
     type_: Type,
     prev: u32,
     next: u32,
-    users: Vec<u32>,
+    users: HashSet<u32>,
 }
 
 impl Default for InstBase {
@@ -38,7 +39,7 @@ impl Default for InstBase {
             type_: Default::default(),
             prev: u32::MAX,
             next: u32::MAX,
-            users: Vec::new(),
+            users: HashSet::new(),
         }
     }
 }
@@ -93,7 +94,14 @@ macro_rules! type_str {
 
 macro_rules! dump_users {
     ( $users:expr ) => {
+        let mut users = Vec::new();
         for user in &$users {
+            users.push(user);
+            // print!("{}, ", user);
+        }
+        users.sort();
+
+        for user in users {
             print!("{}, ", user);
         }
         println!("");
@@ -104,14 +112,16 @@ impl Inst {
     pub fn dump(&self) {
         match self {
             Inst::Parameter(base) => {
-                println!("{} Parameter          -> ", type_str!(base.type_));
+                print!("{} Parameter          -> ", type_str!(base.type_));
+                dump_users!(base.users);
             }
             Inst::Constant(con) => {
-                println!(
+                print!(
                     "{} Constant {}        -> ",
                     type_str!(con.inst_base.type_),
                     con.value
                 );
+                dump_users!(con.inst_base.users);
             }
             Inst::Add(op) => {
                 print!(
@@ -162,6 +172,24 @@ impl Inst {
             Inst::Constant(con) => con.value = value,
             _ => panic!("Can not set value for non constant instruction"),
         }
+    }
+
+    fn set_inputs(&mut self, inputs: &[u32]) {
+        match self {
+            Inst::Add(op) => {
+                op.input1 = inputs[0];
+                op.input2 = inputs[1];
+            }
+            _ => panic!("Not implemented yet"),
+        }
+    }
+
+    pub fn insert_user(&mut self, user: u32) {
+        match self {
+            Inst::Parameter(base) => base.users.insert(user),
+            Inst::Constant(con) => con.inst_base.users.insert(user),
+            Inst::Add(op) => op.inst_base.users.insert(user),
+        };
     }
 }
 
@@ -237,17 +265,19 @@ impl Graph {
         );
     }
 
-    fn contains_inst(&self, id: u32) -> bool {
-        let mut ret = false;
-        for (_, block) in &self.blocks {
-            ret = block.instructions.contains_key(&id);
+    fn contains_inst(&self, id: u32) -> i32 {
+        let mut ret: i32 = -1;
+        for (id_bb, block) in &self.blocks {
+            if block.instructions.contains_key(&id) {
+                ret = *id_bb
+            }
         }
         ret
     }
 
     fn push_inst(&mut self, id_bb: i32, id_inst: u32, inst: Inst) {
         assert!(
-            self.contains_inst(id_inst) == false,
+            self.contains_inst(id_inst) == -1,
             "Instruction with id {} already exists in this graph",
             id_inst
         );
@@ -261,7 +291,39 @@ impl Graph {
             .get_mut(&id_bb)
             .unwrap()
             .push_back(id_inst, inst);
-        // self.insts_blocks.insert(id_inst, id_bb);
+    }
+
+    fn set_inputs(&mut self, id: u32, inputs: &[u32]) {
+        let bb = self.contains_inst(id);
+        assert!(
+            bb != -1,
+            "Instruction with id {} does not exist in this graph",
+            id
+        );
+
+        for input in inputs {
+            let input_bb = self.contains_inst(*input);
+            assert!(
+                input_bb != -1,
+                "Input with id {} does not exist in this graph",
+                *input
+            );
+            self.blocks
+                .get_mut(&input_bb)
+                .unwrap()
+                .instructions
+                .get_mut(input)
+                .unwrap()
+                .insert_user(id);
+        }
+
+        self.blocks
+            .get_mut(&bb)
+            .unwrap()
+            .instructions
+            .get_mut(&id)
+            .unwrap()
+            .set_inputs(inputs);
     }
 
     fn dump(&self) {
@@ -277,6 +339,7 @@ impl Graph {
             }
             println!("BB{}:", x);
             self.blocks.get(x).unwrap().dump();
+            println!("");
         }
         println!("BB-1");
     }
@@ -313,6 +376,11 @@ impl<'a> IrConstructor<'_> {
         self.get_mut_inst().set_value(value);
         self
     }
+
+    pub fn inputs(&mut self, inputs: &[u32]) -> &mut Self {
+        self.graph.set_inputs(self.current_inst, inputs);
+        self
+    }
 }
 
 macro_rules! basic_block {
@@ -343,13 +411,13 @@ fn main() {
     inst!(z, Constant, 2).val(7).s32();
     basic_block!(z, 2);
     {
-        inst!(z, Add, 3).s32();
-        inst!(z, Add, 4).s32();
+        inst!(z, Add, 3).s32().inputs(&[1, 2]);
+        inst!(z, Add, 4).s32().inputs(&[1, 2]);
     }
     basic_block!(z, 3);
     {
-        inst!(z, Add, 5).s32();
-        inst!(z, Add, 6).s32();
+        inst!(z, Add, 5).s32().inputs(&[1, 2]);
+        inst!(z, Add, 6).s32().inputs(&[4, 5]);
     }
 
     z.graph.dump();
