@@ -16,8 +16,17 @@ impl<'a> IrConstructor<'_> {
         }
     }
 
-    pub fn basic_block(&mut self, id: i8, _succs: &[i8]) {
-        let bb = BasicBlock::new();
+    pub fn start_bb(&mut self, succ: i8) {
+        assert!(self.current_bb == 0);
+        self.graph
+            .blocks
+            .get_mut(&self.current_bb)
+            .unwrap()
+            .set_succs(&[succ]);
+    }
+
+    pub fn basic_block(&mut self, id: i8, succs: &[i8]) {
+        let bb = BasicBlock::new(succs);
 
         self.graph.push(id, bb);
         self.current_bb = id;

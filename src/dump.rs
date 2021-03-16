@@ -59,6 +59,16 @@ impl BasicBlock {
     pub fn dump(&self) {
         let mut next = self.first;
 
+        print!("preds: ");
+        for pred in &self.get_preds() {
+            print!("{}, ", pred);
+        }
+        print!("succs: ");
+        for succ in &self.get_succs() {
+            print!("{}, ", succ);
+        }
+        println!("");
+
         loop {
             if next == u32::MAX {
                 break;

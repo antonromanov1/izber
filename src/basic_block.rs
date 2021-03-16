@@ -3,21 +3,60 @@ use std::collections::HashMap;
 use crate::instruction::Inst;
 
 pub struct BasicBlock {
-    // preds: Vec<u32>,
-    // succs: Vec<u32>,
+    preds: Vec<i8>,
+    succs: Vec<i8>,
     pub instructions: HashMap<u32, Inst>,
     pub first: u32,
     last: u32,
 }
 
 impl BasicBlock {
-    pub fn new() -> BasicBlock {
-        BasicBlock {
+    pub fn new(succs: &[i8]) -> BasicBlock {
+        let mut ret = BasicBlock {
+            preds: Vec::new(),
+            succs: Vec::new(),
             instructions: HashMap::new(),
             first: u32::MAX,
             last: u32::MAX,
+        };
+
+        assert!(
+            succs.len() < 3,
+            "Basic block can not have more than 2 successors"
+        );
+        for succ in succs {
+            ret.succs.push(*succ);
+        }
+        ret
+    }
+
+    pub fn get_preds(&self) -> Vec<i8> {
+        self.preds.clone()
+    }
+
+    pub fn get_succs(&self) -> Vec<i8> {
+        self.succs.clone()
+    }
+
+    pub fn set_succs(&mut self, succs: &[i8]) {
+        assert!(self.succs.is_empty(), "BB has successors");
+        for succ in succs {
+            self.succs.push(*succ);
         }
     }
+
+    /*
+    pub fn set_preds(&mut self, preds: &[i8]) {
+        assert!(self.preds.is_empty());
+        for pred in preds {
+            self.preds.push(*pred);
+        }
+    }
+
+    pub fn push_pred(&mut self, pred: i8) {
+        self.preds.push(pred);
+    }
+    */
 
     // checks whether is basic block empty
     // sets id to next field of last instruction, resets last instruction to this,
@@ -46,8 +85,8 @@ impl Graph {
         let mut graph = Graph {
             blocks: HashMap::new(),
         };
-        graph.push(0, BasicBlock::new());
-        graph.push(-1, BasicBlock::new());
+        graph.push(0, BasicBlock::new(&[]));
+        graph.push(-1, BasicBlock::new(&[]));
         graph
     }
 

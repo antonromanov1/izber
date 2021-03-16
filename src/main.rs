@@ -17,6 +17,7 @@ fn main() {
     let mut graph = Graph::new();
     let mut z = IrConstructor::new(&mut graph);
     {
+        z.start_bb(2);
         parameter!(z, 1).s32();
         constant!(z, 2).val(7).s32();
         z.basic_block(2, &[3]);
