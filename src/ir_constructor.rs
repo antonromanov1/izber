@@ -1,9 +1,9 @@
-use crate::basic_block::Graph;
+use crate::basic_block::{BasicBlock, Graph};
 use crate::instruction::{Inst, Type};
 
 pub struct IrConstructor<'a> {
     pub graph: &'a mut Graph,
-    pub current_bb: i32,
+    pub current_bb: i8,
     pub current_inst: u32,
 }
 
@@ -14,6 +14,13 @@ impl<'a> IrConstructor<'_> {
             current_bb: 0,
             current_inst: u32::MAX,
         }
+    }
+
+    pub fn basic_block(&mut self, id: i8, _succs: &[i8]) {
+        let bb = BasicBlock::new();
+
+        self.graph.push(id, bb);
+        self.current_bb = id;
     }
 
     pub fn get_mut_inst(&mut self) -> &mut Inst {
@@ -40,16 +47,6 @@ impl<'a> IrConstructor<'_> {
 }
 
 #[macro_export]
-macro_rules! basic_block {
-    ( $ir_constructor:ident, $id: expr ) => {
-        let bb = BasicBlock::new();
-
-        $ir_constructor.graph.push($id, bb);
-        $ir_constructor.current_bb = $id;
-    };
-}
-
-#[macro_export]
 macro_rules! inst {
     ( $ir_constructor:ident, $opcode:ident, $id:expr ) => {{
         let inst = Inst::$opcode(Default::default());
@@ -58,5 +55,19 @@ macro_rules! inst {
             .push_inst($ir_constructor.current_bb, $id, inst);
         $ir_constructor.current_inst = $id;
         &mut $ir_constructor
+    }};
+}
+
+#[macro_export]
+macro_rules! parameter {
+    ( $ir_constructor:ident, $id:expr ) => {{
+        inst!($ir_constructor, Parameter, $id)
+    }};
+}
+
+#[macro_export]
+macro_rules! constant {
+    ( $ir_constructor:ident, $id:expr ) => {{
+        inst!($ir_constructor, Constant, $id)
     }};
 }

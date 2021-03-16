@@ -38,7 +38,7 @@ impl BasicBlock {
 // Basic block with id 0 is called "start block" and is reserved for parameters
 // and constants, with id -1 is called "end block"
 pub struct Graph {
-    pub blocks: HashMap<i32, BasicBlock>,
+    pub blocks: HashMap<i8, BasicBlock>,
 }
 
 impl Graph {
@@ -51,7 +51,7 @@ impl Graph {
         graph
     }
 
-    pub fn push(&mut self, id: i32, bb: BasicBlock) {
+    pub fn push(&mut self, id: i8, bb: BasicBlock) {
         assert!(
             self.blocks.insert(id, bb).is_none(),
             "Basic block with id {} already exists",
@@ -59,8 +59,8 @@ impl Graph {
         );
     }
 
-    fn contains_inst(&self, id: u32) -> i32 {
-        let mut ret: i32 = -1;
+    fn contains_inst(&self, id: u32) -> i8 {
+        let mut ret: i8 = -1;
         for (id_bb, block) in &self.blocks {
             if block.instructions.contains_key(&id) {
                 ret = *id_bb
@@ -69,7 +69,7 @@ impl Graph {
         ret
     }
 
-    pub fn push_inst(&mut self, id_bb: i32, id_inst: u32, inst: Inst) {
+    pub fn push_inst(&mut self, id_bb: i8, id_inst: u32, inst: Inst) {
         assert!(
             self.contains_inst(id_inst) == -1,
             "Instruction with id {} already exists in this graph",
